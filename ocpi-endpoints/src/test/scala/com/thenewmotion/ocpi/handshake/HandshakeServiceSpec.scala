@@ -1,6 +1,8 @@
 package com.thenewmotion.ocpi.handshake
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.Uri
+import akka.stream.ActorMaterializer
 import akka.testkit.TestKit
 import com.thenewmotion.ocpi.handshake.HandshakeError._
 import com.thenewmotion.ocpi.msgs.v2_0.CommonTypes.{BusinessDetails, Url}
@@ -12,13 +14,12 @@ import org.specs2.matcher.{DisjunctionMatchers, FutureMatchers}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
-import spray.http.Uri
-
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz._
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class HandshakeServiceSpec extends Specification  with Mockito with FutureMatchers
-  with DisjunctionMatchers{
+class HandshakeServiceSpec extends Specification with Mockito with FutureMatchers
+  with DisjunctionMatchers {
 
   "HandshakeService" should {
 
@@ -146,6 +147,8 @@ class HandshakeServiceSpec extends Specification  with Mockito with FutureMatche
   class HandshakeTestScope(_system: ActorSystem) extends TestKit(_system) with Scope {
 
     def this() = this(ActorSystem("ocpi-allstarts"))
+
+    implicit val materializer = ActorMaterializer()
 
     val dateTime1 = DateTime.parse("2010-01-01T00:00:00Z")
 

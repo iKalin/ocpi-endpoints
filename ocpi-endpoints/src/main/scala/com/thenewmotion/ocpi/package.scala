@@ -1,7 +1,7 @@
 package com.thenewmotion
 
+import akka.http.scaladsl.server.Route
 import org.slf4j.LoggerFactory
-import spray.routing._
 
 package object ocpi {
   def Logger(cls: Class[_]) = LoggerFactory.getLogger(cls)

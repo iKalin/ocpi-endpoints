@@ -1,25 +1,24 @@
 package com.thenewmotion.ocpi.locations
 
-import akka.actor.ActorRefFactory
-import akka.util.Timeout
+import akka.actor.ActorSystem
+import akka.http.scaladsl.client.RequestBuilding._
 import com.thenewmotion.ocpi.common.OcpiClient
 import com.thenewmotion.ocpi.locations.LocationsError._
 import com.thenewmotion.ocpi.msgs.v2_0.Locations.LocationsResp
-import spray.client.pipelining._
-import spray.httpx.SprayJsonSupport._
-import spray.http._
-import scala.concurrent.duration._
-
+import akka.http.scaladsl.model.Uri
+import akka.stream.ActorMaterializer
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import scalaz.{-\/, \/, \/-}
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 
-class LocationsClient(implicit refFactory: ActorRefFactory, timeout: Timeout = Timeout(20.seconds)) extends OcpiClient {
+class LocationsClient(implicit actorSystem: ActorSystem, materializer: ActorMaterializer) extends OcpiClient {
+
   import com.thenewmotion.ocpi.msgs.v2_0.OcpiJsonProtocol._
 
   def getLocations(uri: Uri, auth: String)(implicit ec: ExecutionContext): Future[LocationsError \/ LocationsResp] = {
-    val pipeline = request(auth) ~> unmarshal[LocationsResp]
-    val resp = pipeline(Get(uri))
+
+    val resp = singleRequest[LocationsResp](Get(uri), auth)
 
     bimap(resp) {
       case Success(locations) => \/-(locations)

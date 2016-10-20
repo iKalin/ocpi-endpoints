@@ -1,13 +1,12 @@
 package com.thenewmotion.ocpi.locations
 
+import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
+import akka.http.scaladsl.server.{MethodRejection, PathMatcher1, Rejection, Route}
 import com.thenewmotion.mobilityid.{CountryCode, OperatorId}
 import com.thenewmotion.ocpi.{ApiUser, JsonApi}
 import com.thenewmotion.ocpi.msgs.v2_0.CommonTypes.SuccessResp
 import com.thenewmotion.ocpi.msgs.v2_0.Locations._
 import org.joda.time.DateTime
-import spray.http.{HttpMethods, StatusCodes}
-import spray.routing.{MethodRejection, PathMatcher1, Rejection, Route}
-
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz._
 
@@ -17,7 +16,6 @@ class MspLocationsRoute(
   service: MspLocationsService,
   currentTime: => DateTime = DateTime.now
 ) (implicit ec: ExecutionContext) extends JsonApi {
-
 
   import com.thenewmotion.ocpi.msgs.v2_0.OcpiJsonProtocol._
   import com.thenewmotion.ocpi.msgs.v2_0.OcpiStatusCodes.GenericSuccess
@@ -58,10 +56,8 @@ class MspLocationsRoute(
             }
           } ~
           get {
-            dynamic {
-              leftToRejection(service.location(cc, opId, locId)) { location =>
-                complete(LocationResp(GenericSuccess.code, None, data = location)) }
-            }
+            leftToRejection(service.location(cc, opId, locId)) { location =>
+              complete(LocationResp(GenericSuccess.code, None, data = location)) }
           }
         } ~
         pathPrefix(Segment) { evseId =>
@@ -79,10 +75,8 @@ class MspLocationsRoute(
               }
             } ~
             get {
-              dynamic {
-                leftToRejection(service.evse(cc, opId, locId, evseId)) { evse =>
-                  complete(EvseResp(GenericSuccess.code, None, data = evse)) }
-              }
+              leftToRejection(service.evse(cc, opId, locId, evseId)) { evse =>
+                complete(EvseResp(GenericSuccess.code, None, data = evse)) }
             }
           } ~
           (path(Segment) & pathEndOrSingleSlash) { connId =>
@@ -99,10 +93,8 @@ class MspLocationsRoute(
               }
             } ~
             get {
-              dynamic {
-                leftToRejection(service.connector(cc, opId, locId, evseId, connId)) { connector =>
-                  complete(ConnectorResp(GenericSuccess.code, None, data = connector)) }
-              }
+              leftToRejection(service.connector(cc, opId, locId, evseId, connId)) { connector =>
+                complete(ConnectorResp(GenericSuccess.code, None, data = connector)) }
             }
           }
         }

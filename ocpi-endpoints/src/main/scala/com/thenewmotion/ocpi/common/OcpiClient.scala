@@ -1,17 +1,18 @@
 package com.thenewmotion.ocpi.common
 
-import akka.actor.ActorRefFactory
-import akka.util.Timeout
+import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.headers.GenericHttpCredentials
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal}
+import akka.stream.ActorMaterializer
 import com.thenewmotion.ocpi._
-import spray.client.pipelining._
-import spray.http._
-import spray.httpx.unmarshalling._
-
-import scala.concurrent.{Promise, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
 
+abstract class OcpiClient(implicit actorSystem: ActorSystem, materializer: ActorMaterializer) {
 
-abstract class OcpiClient(implicit refFactory: ActorRefFactory, requestTimeout: Timeout) {
+  private val http = Http()
 
   protected val logger = Logger(getClass)
 
@@ -19,20 +20,14 @@ abstract class OcpiClient(implicit refFactory: ActorRefFactory, requestTimeout: 
   private val logRequest: HttpRequest => HttpRequest = { r => logger.debug(r.toString); r }
   private val logResponse: HttpResponse => HttpResponse = { r => logger.debug(r.toString); r }
 
-
-  protected def request(auth: String)(implicit ec: ExecutionContext) = (
-    addCredentials(GenericHttpCredentials("Token", auth, Map()))
-      ~> logRequest
-      ~> sendReceive
-      ~> logResponse
-    )
-
-  protected def unmarshalToOption[T](
-    implicit unmarshaller: FromResponseUnmarshaller[T], ec: ExecutionContext
-  ): Future[HttpResponse] => Future[Option[T]] = {
-    _.map { res =>
-      if (res.status.isFailure) None
-      else Some(unmarshal[T](unmarshaller)(res))
+  protected def singleRequest[T : FromResponseUnmarshaller](req: HttpRequest, auth: String)(implicit ec: ExecutionContext) = {
+    http.singleRequest(logRequest(req.addCredentials(GenericHttpCredentials("Token", auth, Map())))).flatMap { response =>
+      logResponse(response)
+      response.status match {
+        case status if status.isSuccess => Unmarshal(response).to[T]
+        case status =>
+          Future.failed(new RuntimeException(s"Request failed with status ${response.status}"))
+      }
     }
   }
 

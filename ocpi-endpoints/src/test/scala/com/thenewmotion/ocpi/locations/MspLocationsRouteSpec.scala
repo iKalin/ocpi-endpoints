@@ -1,21 +1,17 @@
 package com.thenewmotion.ocpi.locations
 
-
-import com.thenewmotion.ocpi.ApiUser
+import akka.http.scaladsl.model.HttpEntity
+import akka.http.scaladsl.server.{AuthorizationFailedRejection, MalformedRequestContentRejection}
+import com.thenewmotion.ocpi.{ApiUser, Specs2RouteTest}
 import com.thenewmotion.ocpi.locations.LocationsError._
 import org.joda.time.DateTime
 import com.thenewmotion.mobilityid.{CountryCode, OperatorId}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
-import spray.http.MediaTypes._
-import spray.http.{ContentType, HttpCharsets, HttpEntity}
-import spray.routing.{AuthorizationFailedRejection, MalformedRequestContentRejection}
-import spray.testkit.Specs2RouteTest
-
+import akka.http.scaladsl.model.MediaTypes._
 import scala.concurrent.Future
 import scalaz._
-
 
 class MspLocationsRouteSpec extends Specification with Specs2RouteTest with Mockito {
 
@@ -23,8 +19,7 @@ class MspLocationsRouteSpec extends Specification with Specs2RouteTest with Mock
 
     "accept a new location object without authorizing the location ID" in new LocationsTestScope {
 
-      val body = HttpEntity(contentType = ContentType(`application/json`, HttpCharsets.`UTF-8`),
-        string = loc2String)
+      val body = HttpEntity(contentType = `application/json`, string = loc2String)
 
       Put("/NL/TNM/LOC2", body) ~> locationsRoute.routeWithoutRh(apiUser) ~> check {
         there was one(mspLocService).createOrUpdateLocation(===(CountryCode("NL")), ===(OperatorId("TNM")), ===("LOC2"), any)
@@ -33,7 +28,7 @@ class MspLocationsRouteSpec extends Specification with Specs2RouteTest with Mock
 
     "accept patches to a location object" in new LocationsTestScope {
 
-      val body = HttpEntity(contentType = ContentType(`application/json`, HttpCharsets.`UTF-8`), string =
+      val body = HttpEntity(contentType = `application/json`, string =
         s"""
            |{
            |    "id": "LOC1",
@@ -48,7 +43,7 @@ class MspLocationsRouteSpec extends Specification with Specs2RouteTest with Mock
 
     "refuse patches to a location object with malformed JSON" in new LocationsTestScope {
 
-      val body = HttpEntity(contentType = ContentType(`application/json`, HttpCharsets.`UTF-8`), string =
+      val body = HttpEntity(contentType = `application/json`, string =
         s"""
            |{
            |    "UID": "LOC1",
@@ -64,7 +59,7 @@ class MspLocationsRouteSpec extends Specification with Specs2RouteTest with Mock
 
     "accept patches to an EVSE object" in new LocationsTestScope {
 
-      val body = HttpEntity(contentType = ContentType(`application/json`, HttpCharsets.`UTF-8`), string =
+      val body = HttpEntity(contentType = `application/json`, string =
         s"""
            |{
            |    "uid": "NL-TNM-02000000",
@@ -79,7 +74,7 @@ class MspLocationsRouteSpec extends Specification with Specs2RouteTest with Mock
 
     "accept patches to a connector object" in new LocationsTestScope {
 
-      val body = HttpEntity(contentType = ContentType(`application/json`, HttpCharsets.`UTF-8`), string =
+      val body = HttpEntity(contentType = `application/json`, string =
         s"""
            |{
            |    "id": "1",
@@ -111,7 +106,7 @@ class MspLocationsRouteSpec extends Specification with Specs2RouteTest with Mock
     }
 
     "disallow access by authenticated but unauthorized parties" in new LocationsTestScope {
-      val body = HttpEntity(contentType = ContentType(`application/json`, HttpCharsets.`UTF-8`), string = "{}")
+      val body = HttpEntity(contentType = `application/json`, string = "{}")
 
       Patch("/BE/BEC/LOC1", body) ~> locationsRoute.routeWithoutRh(apiUser) ~> check {
         handled must beFalse

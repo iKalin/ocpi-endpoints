@@ -1,63 +1,63 @@
 package com.thenewmotion.ocpi
 
-
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import akka.http.scaladsl.server.{MalformedRequestContentRejection, RejectionHandler}
+import akka.http.scaladsl.server.directives.BasicDirectives
 import com.thenewmotion.ocpi.msgs.v2_0.CommonTypes.ErrorResp
 import com.thenewmotion.ocpi.msgs.v2_0.OcpiStatusCodes._
-import spray.http.StatusCodes._
-import spray.httpx.SprayJsonSupport
-import spray.routing._
-import spray.routing.directives.BasicDirectives
-import spray.routing.directives.RouteDirectives._
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.server._
+import StatusCodes._
+import Directives._
 
 object OcpiRejectionHandler extends BasicDirectives with SprayJsonSupport {
 
   import com.thenewmotion.ocpi.msgs.v2_0.OcpiJsonProtocol._
 
-  val Default = RejectionHandler {
-
-    case (MalformedRequestContentRejection(msg, cause)) :: _ => complete {
-      ( BadRequest,
-        ErrorResp(
-          GenericClientFailure.code,
-          msg))
-    }
-
-    case (r@UnsupportedVersionRejection(version: String)) :: _ => complete {
-      ( BadRequest,
-        ErrorResp(
-          UnsupportedVersion.code,
-          s"${UnsupportedVersion.default_message}: $version"))
-    }
-
-    case (r@AuthenticationFailedRejection(AuthenticationFailedRejection.CredentialsMissing, challengeHeaders)) :: _ =>
-      complete {
+  val Default = RejectionHandler.newBuilder()
+    .handle {
+      case MalformedRequestContentRejection(msg, cause) => complete {
         ( BadRequest,
+          ErrorResp(
+            GenericClientFailure.code,
+            msg))
+      }
+    }.handle {
+      case r@UnsupportedVersionRejection(version: String) => complete {
+        (BadRequest,
+          ErrorResp(
+            UnsupportedVersion.code,
+            s"${UnsupportedVersion.default_message}: $version"))
+      }
+    }.handle {
+      case r@AuthenticationFailedRejection(AuthenticationFailedRejection.CredentialsMissing, challengeHeaders) =>
+        complete {
+          ( BadRequest,
+            ErrorResp(
+              MissingHeader.code,
+              MissingHeader.default_message))
+        }
+    }.handle {
+      case r@AuthenticationFailedRejection(AuthenticationFailedRejection.CredentialsRejected, challengeHeaders) =>
+        complete {
+          ( BadRequest,
+            ErrorResp(
+              AuthenticationFailed.code,
+              s"${AuthenticationFailed.default_message}"))
+        }
+    }.handle {
+      case r@MissingHeaderRejection(header) => complete {
+        (BadRequest,
           ErrorResp(
             MissingHeader.code,
-            MissingHeader.default_message))
+            s"${MissingHeader.default_message}: '$header'"))
       }
-
-    case (r@AuthenticationFailedRejection(AuthenticationFailedRejection.CredentialsRejected, challengeHeaders)) :: _ =>
+    }.handleAll[Rejection] { rejections =>
       complete {
-        ( BadRequest,
+        (BadRequest,
           ErrorResp(
-            AuthenticationFailed.code,
-            s"${AuthenticationFailed.default_message}"))
+            GenericClientFailure.code,
+            rejections.mkString(", ")))
       }
-
-    case (r@MissingHeaderRejection(header)) :: _ => complete {
-      ( BadRequest,
-        ErrorResp(
-          MissingHeader.code,
-          s"${MissingHeader.default_message}: '$header'"))
-    }
-
-    case rejections => complete {
-      (BadRequest,
-        ErrorResp(
-          GenericClientFailure.code,
-          rejections.mkString(", ")))
-    }
-
-  }
+    }.result()
 }

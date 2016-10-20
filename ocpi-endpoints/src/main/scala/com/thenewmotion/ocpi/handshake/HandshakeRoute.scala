@@ -3,12 +3,13 @@ package handshake
 
 import com.thenewmotion.ocpi.msgs.v2_0.OcpiStatusCodes.GenericSuccess
 import org.joda.time.DateTime
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent._
-import spray.routing.{Route, Rejection}
 import scalaz._
-import spray.routing.directives.FutureDirectives
 import ErrorMarshalling._
+import akka.http.scaladsl.server.{Rejection, Route}
+import akka.http.scaladsl.server.directives.FutureDirectives
 
 
 case class HandshakeErrorRejection(error: HandshakeError) extends Rejection

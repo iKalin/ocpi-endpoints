@@ -1,15 +1,13 @@
 package com.thenewmotion.ocpi
 
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.model.headers.{Authorization, GenericHttpCredentials, RawHeader}
+import akka.http.scaladsl.server.AuthenticationFailedRejection
 import com.thenewmotion.ocpi.handshake.HandshakeService
 import com.thenewmotion.ocpi.msgs.v2_0.Versions.EndpointIdentifier
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
-import spray.http.HttpHeaders._
-import spray.http.GenericHttpCredentials
-import spray.http.StatusCodes
-import spray.routing.AuthenticationFailedRejection
-import spray.testkit.Specs2RouteTest
 import org.joda.time.DateTime
 import spray.json._
 import lenses.JsonLenses._

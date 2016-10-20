@@ -1,24 +1,17 @@
 val logging = Seq(
-  "ch.qos.logback"               % "logback-classic"          %   "1.1.3" % "test",
-  "org.slf4j"                    % "slf4j-api"                %   "1.7.15")
+  "ch.qos.logback"               % "logback-classic"          %   "1.1.7" % "test",
+  "org.slf4j"                    % "slf4j-api"                %   "1.7.21")
 
 val `spray-json` = Seq("io.spray" %% "spray-json"             %   "1.3.2")
 
-val spray = Seq(
-  "io.spray"                    %% "spray-routing-shapeless2" %   "1.3.3",
-  "io.spray"                    %% "spray-testkit"            %   "1.3.3" % "test",
-  "io.spray"                    %% "spray-client"             %   "1.3.3")
+val akka = {
+  def akkaModule(name: String) = "com.typesafe.akka" %% s"akka-$name" % "2.4.11"
 
-def akka(scalaVersion: String) = {
-  val version = scalaVersion match {
-    case tnm.ScalaVersion.curr => "2.4.1"
-    case tnm.ScalaVersion.prev => "2.3.14"
-  }
-
-  Seq("com.typesafe.akka" %% s"akka-actor" % version)
+  Seq(akkaModule("actor"), akkaModule("http-experimental"),
+    akkaModule("http-spray-json-experimental"), akkaModule("http-testkit") % "test")
 }
 
-val scalaz = Seq("org.scalaz"        %% "scalaz-core"         %   "7.1.6")
+val scalaz = Seq("org.scalaz"        %% "scalaz-core"         %   "7.1.10")
 
 val misc = Seq(
   "com.thenewmotion"            %% "joda-money-ext"           %   "1.0.0",
@@ -56,7 +49,7 @@ val `ocpi-endpoints` = project
   .settings(
     commonSettings,
     description := "OCPI endpoints",
-    libraryDependencies := logging ++ spray ++ akka(scalaVersion.value) ++ scalaz ++ misc ++ testing)
+    libraryDependencies := logging ++ akka ++ scalaz ++ misc ++ testing)
 
 val `ocpi-endpoints-root` = (project in file("."))
   .aggregate(

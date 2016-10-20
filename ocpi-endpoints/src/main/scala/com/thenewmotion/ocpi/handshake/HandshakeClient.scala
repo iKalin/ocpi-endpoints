@@ -1,27 +1,24 @@
 package com.thenewmotion.ocpi.handshake
 
-import akka.actor.ActorRefFactory
-import akka.util.Timeout
+import akka.actor.ActorSystem
 import com.thenewmotion.ocpi.common.OcpiClient
 import com.thenewmotion.ocpi.handshake.HandshakeError._
 import com.thenewmotion.ocpi.msgs.v2_0.CommonTypes.Url
 import com.thenewmotion.ocpi.msgs.v2_0.Credentials.{Creds, CredsResp}
 import com.thenewmotion.ocpi.msgs.v2_0.Versions._
-import spray.client.pipelining._
-import spray.http._
-import spray.httpx.SprayJsonSupport._
-
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import akka.http.scaladsl.model.Uri
+import akka.http.scaladsl.client.RequestBuilding._
+import akka.stream.ActorMaterializer
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 import scalaz.{-\/, \/, \/-}
 
-class HandshakeClient(implicit refFactory: ActorRefFactory, timeout: Timeout = Timeout(20.seconds)) extends OcpiClient {
+class HandshakeClient(implicit actorSystem: ActorSystem, materializer: ActorMaterializer) extends OcpiClient {
   import com.thenewmotion.ocpi.msgs.v2_0.OcpiJsonProtocol._
 
   def getTheirVersions(uri: Uri, token: String)(implicit ec: ExecutionContext): Future[HandshakeError \/ VersionsResp] = {
-    val pipeline = request(token) ~> unmarshal[VersionsResp]
-    val resp = pipeline(Get(uri))
+    val resp = singleRequest[VersionsResp](Get(uri), token)
     bimap(resp) {
       case Success(versions) => \/-(versions)
       case Failure(t) =>
@@ -32,8 +29,7 @@ class HandshakeClient(implicit refFactory: ActorRefFactory, timeout: Timeout = T
 
   def getTheirVersionDetails(uri: Uri, token: String)
       (implicit ec: ExecutionContext): Future[HandshakeError \/ VersionDetailsResp] = {
-    val pipeline = request(token) ~> unmarshal[VersionDetailsResp]
-    val resp = pipeline(Get(uri))
+    val resp = singleRequest[VersionDetailsResp](Get(uri), token)
     bimap(resp) {
       case Success(versionDet) => \/-(versionDet)
       case Failure(t) =>
@@ -44,8 +40,7 @@ class HandshakeClient(implicit refFactory: ActorRefFactory, timeout: Timeout = T
 
   def sendCredentials(theirCredUrl: Url, tokenToConnectToThem: String, credToConnectToUs: Creds)
       (implicit ec: ExecutionContext): Future[HandshakeError \/ CredsResp] = {
-    val pipeline = request(tokenToConnectToThem) ~> unmarshal[CredsResp]
-    val resp = pipeline(Post(theirCredUrl, credToConnectToUs))
+    val resp = singleRequest[CredsResp](Post(theirCredUrl, credToConnectToUs), tokenToConnectToThem)
     bimap(resp) {
       case Success(theirCreds) => \/-(theirCreds)
       case Failure(t) =>

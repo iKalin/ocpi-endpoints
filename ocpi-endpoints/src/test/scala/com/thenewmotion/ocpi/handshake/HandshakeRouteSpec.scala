@@ -1,20 +1,20 @@
 package com.thenewmotion.ocpi.handshake
 
+import akka.http.scaladsl.model.HttpEntity
+import com.thenewmotion.ocpi.Specs2RouteTest
 import com.thenewmotion.ocpi.handshake.HandshakeError._
 import com.thenewmotion.ocpi.handshake.HandshakeError.UnknownPartyToken
-import com.thenewmotion.ocpi.msgs.v2_0.CommonTypes.{BusinessDetails => OcpiBusinessDetails, Image, ImageCategory}
+import com.thenewmotion.ocpi.msgs.v2_0.CommonTypes.{Image, ImageCategory, BusinessDetails => OcpiBusinessDetails}
 import com.thenewmotion.ocpi.msgs.v2_0.Credentials.Creds
 import com.thenewmotion.ocpi.msgs.v2_0.OcpiStatusCodes.GenericSuccess
 import org.joda.time.DateTime
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
-import spray.http.MediaTypes._
-import spray.http.StatusCodes._
-import spray.http.{ContentType, HttpCharsets, HttpEntity}
-import spray.testkit.Specs2RouteTest
 import scala.concurrent.Future
 import scalaz._
+import akka.http.scaladsl.model.MediaTypes._
+import akka.http.scaladsl.model.StatusCodes._
 
 class HandshakeRouteSpec extends Specification with Specs2RouteTest with Mockito {
 
@@ -40,7 +40,7 @@ class HandshakeRouteSpec extends Specification with Specs2RouteTest with Mockito
            |}
            |""".stripMargin
 
-      val body = HttpEntity(contentType = ContentType(`application/json`, HttpCharsets.`UTF-8`), string = theirCredsData)
+      val body = HttpEntity(contentType = `application/json`, string = theirCredsData)
 
       Post("/credentials", body) ~> credentialsRoute.route(selectedVersion, tokenToConnectToUs) ~> check {
         status.isSuccess === true
@@ -92,7 +92,7 @@ class HandshakeRouteSpec extends Specification with Specs2RouteTest with Mockito
            |}
            |""".stripMargin
 
-      val body = HttpEntity(contentType = ContentType(`application/json`, HttpCharsets.`UTF-8`), string = theirNewCredsData)
+      val body = HttpEntity(contentType = `application/json`, string = theirNewCredsData)
 
       Put("/credentials", body) ~> credentialsRoute.route(selectedVersion, tokenToConnectToUs) ~> check {
         status.isSuccess === true
@@ -125,7 +125,7 @@ class HandshakeRouteSpec extends Specification with Specs2RouteTest with Mockito
            |}
            |""".stripMargin
 
-      val body = HttpEntity(contentType = ContentType(`application/json`, HttpCharsets.`UTF-8`), string = theirNewCredsData)
+      val body = HttpEntity(contentType = `application/json`, string = theirNewCredsData)
 
       Put("/credentials", body) ~>
       credentialsRoute.route(selectedVersion, tokenToConnectToUs) ~>
@@ -148,7 +148,7 @@ class HandshakeRouteSpec extends Specification with Specs2RouteTest with Mockito
            |}
           """.stripMargin
 
-      val body = HttpEntity(contentType = ContentType(`application/json`, HttpCharsets.`UTF-8`), string = theirVersData)
+      val body = HttpEntity(contentType = `application/json`, string = theirVersData)
 
       Post("/initiateHandshake", body) ~> initHandshakeRoute.route ~> check {
         status.isSuccess === true
@@ -176,7 +176,7 @@ class HandshakeRouteSpec extends Specification with Specs2RouteTest with Mockito
            |}
           """.stripMargin
 
-      val body = HttpEntity(contentType = ContentType(`application/json`, HttpCharsets.`UTF-8`), string = theirVersData)
+      val body = HttpEntity(contentType = `application/json`, string = theirVersData)
 
       Post("/initiateHandshake", body) ~> initHandshakeRoute.route ~> check {
         responseAs[String].contains(GenericSuccess.code.toString) must beFalse

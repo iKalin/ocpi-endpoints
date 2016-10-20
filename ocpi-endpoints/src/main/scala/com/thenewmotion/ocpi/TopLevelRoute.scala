@@ -1,14 +1,14 @@
 package com.thenewmotion.ocpi
 
+import akka.http.scaladsl.model.Uri
+import akka.http.scaladsl.model.headers.{GenericHttpCredentials, HttpChallenge, HttpCredentials}
+import akka.http.scaladsl.server.Route
 import com.thenewmotion.ocpi.handshake.InitiateHandshakeRoute
 import com.thenewmotion.ocpi.msgs.v2_0.OcpiStatusCodes.GenericSuccess
 import com.thenewmotion.ocpi.msgs.v2_0.Versions._
-import spray.http._, HttpHeaders._
-import spray.routing._, authentication._
+import akka.http.scaladsl.server.directives.SecurityDirectives._
 import scala.concurrent.{ExecutionContext, Future}
 import org.joda.time.DateTime
-import spray.http.Uri
-
 
 trait TopLevelRoute extends JsonApi {
   import com.thenewmotion.ocpi.msgs.v2_0.OcpiJsonProtocol._
@@ -17,9 +17,7 @@ trait TopLevelRoute extends JsonApi {
 
   def currentTime = DateTime.now
 
-  val EndPointPathMatcher = Segment.flatMap {
-    case s => EndpointIdentifier.withName(s)
-  }
+  val EndPointPathMatcher = Segment.flatMap(s => EndpointIdentifier.withName(s))
 
   def appendPath(uri: Uri, segments: String*) = {
     uri.withPath(segments.foldLeft(uri.path) {
@@ -64,19 +62,19 @@ trait TopLevelRoute extends JsonApi {
     }
 
 
-  def topLevelRoute(implicit ec: ExecutionContext) = {
+  def topLevelRoute(implicit ec: ExecutionContext): Route = {
     val externalUseToken = new TokenAuthenticator(routingConfig.authenticateApiUser)
     val internalUseToken = new TokenAuthenticator(routingConfig.authenticateInternalUser)
 
     (pathPrefix(routingConfig.namespace) & extract(_.request.uri)) { uri =>
       pathPrefix("initiateHandshake") {
         pathEndOrSingleSlash {
-          authenticate(internalUseToken) { internalUser: ApiUser =>
+          authenticateOrRejectWithChallenge(internalUseToken) { internalUser: ApiUser =>
             new InitiateHandshakeRoute(routingConfig.handshakeService).route
           }
         }
       } ~
-      authenticate(externalUseToken) { apiUser: ApiUser =>
+      authenticateOrRejectWithChallenge(externalUseToken) { apiUser: ApiUser =>
         pathPrefix(EndpointIdentifier.Versions.name) {
           pathEndOrSingleSlash {
             versionsRoute(uri)
@@ -95,20 +93,17 @@ trait TopLevelRoute extends JsonApi {
 
 class TokenAuthenticator(
   apiUser: String => Option[ApiUser]
-)(implicit val executionContext: ExecutionContext) extends HttpAuthenticator[ApiUser] {
-
-  val challenge = `WWW-Authenticate`(
-    HttpChallenge(scheme = "Token", realm = "ocpi", params = Map.empty)) :: Nil
-
-  def authenticate(credentials: Option[HttpCredentials], ctx: RequestContext) =
+)(implicit val executionContext: ExecutionContext) extends (Option[HttpCredentials] ⇒ Future[AuthenticationResult[ApiUser]]) {
+  override def apply(credentials: Option[HttpCredentials]): Future[AuthenticationResult[ApiUser]] = {
     Future(
       credentials
         .flatMap {
           case GenericHttpCredentials("Token", token, _) => Some(token)
           case _ => None
+        }.flatMap(apiUser) match {
+          case Some(x) => Right(x)
+          case None => Left(HttpChallenge(scheme = "Token", realm = "ocpi"))
         }
-        .flatMap(apiUser)
     )
-
-  def getChallengeHeaders(r: HttpRequest) = challenge
+  }
 }
