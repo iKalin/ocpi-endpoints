@@ -7,10 +7,12 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal}
 import akka.stream.ActorMaterializer
 import com.thenewmotion.ocpi._
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{Future, Promise}
 import scala.util.Try
 
 abstract class OcpiClient(implicit actorSystem: ActorSystem, materializer: ActorMaterializer) {
+
+  import actorSystem.dispatcher
 
   private val http = Http()
 
@@ -20,7 +22,7 @@ abstract class OcpiClient(implicit actorSystem: ActorSystem, materializer: Actor
   private val logRequest: HttpRequest => HttpRequest = { r => logger.debug(r.toString); r }
   private val logResponse: HttpResponse => HttpResponse = { r => logger.debug(r.toString); r }
 
-  protected def singleRequest[T : FromResponseUnmarshaller](req: HttpRequest, auth: String)(implicit ec: ExecutionContext) = {
+  protected def singleRequest[T : FromResponseUnmarshaller](req: HttpRequest, auth: String) = {
     http.singleRequest(logRequest(req.addCredentials(GenericHttpCredentials("Token", auth, Map())))).flatMap { response =>
       logResponse(response)
       response.status match {
@@ -31,8 +33,7 @@ abstract class OcpiClient(implicit actorSystem: ActorSystem, materializer: Actor
     }
   }
 
-  protected def bimap[T, M](f: Future[T])(pf: PartialFunction[Try[T], M])
-    (implicit ec: ExecutionContext): Future[M] = {
+  protected def bimap[T, M](f: Future[T])(pf: PartialFunction[Try[T], M]): Future[M] = {
     val p = Promise[M]()
     f.onComplete(r => p.complete(Try(pf(r))))
     p.future

@@ -69,7 +69,7 @@ class HandshakeRouteSpec extends Specification with Specs2RouteTest with Mockito
 
     "accept the update of the credentials they sent us to connect to them" in new CredentialsTestScope {
       handshakeService.credsToConnectToUs(any) returns \/-(credsToConnectToUs)
-      handshakeService.reactToUpdateCredsRequest(any, any, any)(any) returns
+      handshakeService.reactToUpdateCredsRequest(any, any, any) returns
         Future.successful(\/-(newCredsToConnectToUs))
 
       val theirLog = credsToConnectToThem.business_details.logo.get
@@ -101,7 +101,7 @@ class HandshakeRouteSpec extends Specification with Specs2RouteTest with Mockito
       }
     }
     "reject indicating the reason if trying to update credentials for a token we are still waiting for its registration request" in new CredentialsTestScope {
-      handshakeService.reactToUpdateCredsRequest(any, any, any)(any) returns
+      handshakeService.reactToUpdateCredsRequest(any, any, any) returns
         Future.successful(-\/(WaitingForRegistrationRequest))
 
 
@@ -216,7 +216,7 @@ class HandshakeRouteSpec extends Specification with Specs2RouteTest with Mockito
     val handshakeService = mock[HandshakeService]
 
     //default mocks
-    handshakeService.reactToHandshakeRequest(any, any, any)(any) returns
+    handshakeService.reactToHandshakeRequest(any, any, any) returns
       Future.successful(\/-(credsToConnectToUs))
     handshakeService.initiateHandshakeProcess(credsToConnectToThem.business_details.name, credsToConnectToThem.country_code,
       credsToConnectToThem.party_id, credsToConnectToThem.token, credsToConnectToThem.url) returns

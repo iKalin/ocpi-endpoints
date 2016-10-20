@@ -11,7 +11,7 @@ import com.thenewmotion.ocpi.msgs.v2_0.CommonTypes._
 import com.thenewmotion.ocpi.msgs.v2_0.Credentials.Creds
 import com.thenewmotion.ocpi.msgs.v2_0.Versions
 import com.thenewmotion.ocpi.msgs.v2_0.Versions.{Endpoint, EndpointIdentifier, VersionDetailsResp}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scalaz.Scalaz._
 import scalaz._
 
@@ -24,6 +24,8 @@ abstract class HandshakeService(
   ourPartyId: String,
   ourCountryCode: String
 )(implicit actorSystem: ActorSystem, materializer: ActorMaterializer) extends FutureEitherUtils {
+
+  import actorSystem.dispatcher
 
   private val logger = Logger(getClass)
 
@@ -40,7 +42,7 @@ abstract class HandshakeService(
     version: String,
     existingTokenToConnectToUs: String,
     credsToConnectToThem: Creds
-  )(implicit ec: ExecutionContext): Future[HandshakeError \/ Creds] = {
+  ): Future[HandshakeError \/ Creds] = {
 
     logger.info(s"Handshake initiated by party: ${credsToConnectToThem.party_id}, " +
       s"using token: $existingTokenToConnectToUs, " +
@@ -77,7 +79,7 @@ abstract class HandshakeService(
     version: String,
     existingTokenToConnectToUs: String,
     credsToConnectToThem: Creds
-  )(implicit ec: ExecutionContext): Future[HandshakeError \/ Creds] = {
+  ): Future[HandshakeError \/ Creds] = {
 
     logger.info(s"Update credentials request sent by ${credsToConnectToThem.party_id} " +
       s"using token: $existingTokenToConnectToUs, for version: $version. " +
@@ -110,8 +112,7 @@ abstract class HandshakeService(
     * @return new credentials to connect to them
     */
   def initiateHandshakeProcess(partyName: String, countryCode: String, partyId: String,
-    tokenToConnectToThem: String, theirVersionsUrl: Uri)
-    (implicit ec: ExecutionContext): Future[HandshakeError \/ Creds] = {
+    tokenToConnectToThem: String, theirVersionsUrl: Uri): Future[HandshakeError \/ Creds] = {
     logger.info(s"initiate handshake process with: $theirVersionsUrl, $tokenToConnectToThem")
     val newTokenToConnectToUs = ApiTokenGenerator.generateToken
     logger.debug(s"issuing new token for party with initial authorization token: '$tokenToConnectToThem'")
@@ -144,8 +145,8 @@ abstract class HandshakeService(
     * and return them if no error happened, otherwise return the error. It doesn't store them cause could be the party
     * is not still registered
     */
-  private def getTheirDetails(version: String, tokenToConnectToThem: String, theirVersionsUrl: Uri, initiatedByUs: Boolean)
-    (implicit ec: ExecutionContext): Future[HandshakeError \/ VersionDetailsResp] = {
+  private def getTheirDetails(version: String, tokenToConnectToThem: String, theirVersionsUrl: Uri,
+                              initiatedByUs: Boolean): Future[HandshakeError \/ VersionDetailsResp] = {
 
     def findCommonVersion(versionResp: Versions.VersionsResp): Future[HandshakeError \/ Versions.Version] = {
       versionResp.data.find(_.version == version) match {

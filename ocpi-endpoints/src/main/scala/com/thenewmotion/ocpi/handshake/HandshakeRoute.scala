@@ -64,11 +64,12 @@ class InitiateHandshakeRoute(service: HandshakeService, currentTime: => DateTime
   import com.thenewmotion.ocpi.msgs.v2_0.Credentials._
   import com.thenewmotion.ocpi.msgs.v2_0.Versions._
 
-  def route(implicit ec: ExecutionContext) = {
+  def route = {
     post {
       entity(as[VersionsRequest]) { theirVersionsUrlInfo =>
         complete {
           import theirVersionsUrlInfo._
+          import scala.concurrent.ExecutionContext.Implicits.global
           service
             .initiateHandshakeProcess(party_name, country_code, party_id, token, url)
             .map(_.map(CredsResp(GenericSuccess.code,Some(GenericSuccess.default_message), currentTime, _)))

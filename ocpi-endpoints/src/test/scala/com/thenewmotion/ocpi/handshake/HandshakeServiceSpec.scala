@@ -14,9 +14,8 @@ import org.specs2.matcher.{DisjunctionMatchers, FutureMatchers}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scalaz._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class HandshakeServiceSpec extends Specification with Mockito with FutureMatchers
   with DisjunctionMatchers {
@@ -71,7 +70,7 @@ class HandshakeServiceSpec extends Specification with Mockito with FutureMatcher
           be_-\/(CouldNotPersistNewToken(tokenToConnectToUs): HandshakeError).await
       }
       "return an error when it fails sending the credentials" >> new HandshakeTestScope{
-        _client.sendCredentials(any[Url], any[String], any[Creds])(any[ExecutionContext]) returns
+        _client.sendCredentials(any[Url], any[String], any[Creds]) returns
           Future.successful(-\/(SendingCredentialsFailed))
 
         val result = handshakeService.initiateHandshakeProcess(credsToConnectToThem.business_details.name, credsToConnectToThem.country_code,
@@ -200,7 +199,7 @@ class HandshakeServiceSpec extends Specification with Mockito with FutureMatcher
         Endpoint(EndpointIdentifier.Locations, theirVersionDetailsUrl + "/locations"),
         Endpoint(EndpointIdentifier.Tariffs, theirVersionDetailsUrl + "/tariffs"))))))
 
-    _client.sendCredentials(any[Url], any[String], any[Creds])(any[ExecutionContext]) returns Future.successful(
+    _client.sendCredentials(any[Url], any[String], any[Creds]) returns Future.successful(
       \/-(ourCredsResp))
 
     // handshakeServices

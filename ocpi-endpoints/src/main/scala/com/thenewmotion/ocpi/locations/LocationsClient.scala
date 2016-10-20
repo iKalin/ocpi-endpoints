@@ -7,7 +7,7 @@ import com.thenewmotion.ocpi.locations.LocationsError._
 import com.thenewmotion.ocpi.msgs.v2_0.Locations.LocationsResp
 import akka.http.scaladsl.model.Uri
 import akka.stream.ActorMaterializer
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scalaz.{-\/, \/, \/-}
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
@@ -16,7 +16,7 @@ class LocationsClient(implicit actorSystem: ActorSystem, materializer: ActorMate
 
   import com.thenewmotion.ocpi.msgs.v2_0.OcpiJsonProtocol._
 
-  def getLocations(uri: Uri, auth: String)(implicit ec: ExecutionContext): Future[LocationsError \/ LocationsResp] = {
+  def getLocations(uri: Uri, auth: String): Future[LocationsError \/ LocationsResp] = {
 
     val resp = singleRequest[LocationsResp](Get(uri), auth)
 

@@ -7,7 +7,7 @@ import com.thenewmotion.ocpi.handshake.InitiateHandshakeRoute
 import com.thenewmotion.ocpi.msgs.v2_0.OcpiStatusCodes.GenericSuccess
 import com.thenewmotion.ocpi.msgs.v2_0.Versions._
 import akka.http.scaladsl.server.directives.SecurityDirectives._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import org.joda.time.DateTime
 
 trait TopLevelRoute extends JsonApi {
@@ -62,7 +62,7 @@ trait TopLevelRoute extends JsonApi {
     }
 
 
-  def topLevelRoute(implicit ec: ExecutionContext): Route = {
+  def topLevelRoute: Route = {
     val externalUseToken = new TokenAuthenticator(routingConfig.authenticateApiUser)
     val internalUseToken = new TokenAuthenticator(routingConfig.authenticateInternalUser)
 
@@ -80,12 +80,12 @@ trait TopLevelRoute extends JsonApi {
             pathEndOrSingleSlash {
               versionsRoute(uri)
             } ~
-              pathPrefix(Segment) { version =>
-                routingConfig.versions.get(version) match {
-                  case None => reject(UnsupportedVersionRejection(version))
-                  case Some(validVersion) => versionRoute(version, validVersion, uri, apiUser)
-                }
+            pathPrefix(Segment) { version =>
+              routingConfig.versions.get(version) match {
+                case None => reject(UnsupportedVersionRejection(version))
+                case Some(validVersion) => versionRoute(version, validVersion, uri, apiUser)
               }
+            }
           }
         }
       }
@@ -95,14 +95,15 @@ trait TopLevelRoute extends JsonApi {
 
 class TokenAuthenticator(
   apiUser: String => Option[ApiUser]
-)(implicit val executionContext: ExecutionContext) extends (Option[HttpCredentials] ⇒ Future[AuthenticationResult[ApiUser]]) {
+) extends (Option[HttpCredentials] ⇒ Future[AuthenticationResult[ApiUser]]) {
   override def apply(credentials: Option[HttpCredentials]): Future[AuthenticationResult[ApiUser]] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
     Future(
       credentials
         .flatMap {
           case GenericHttpCredentials("Token", token, _) => Some(token)
           case _ => None
-        }.flatMap(apiUser) match {
+        } flatMap apiUser match {
           case Some(x) => Right(x)
           case None => Left(HttpChallenge(scheme = "Token", realm = "ocpi"))
         }
