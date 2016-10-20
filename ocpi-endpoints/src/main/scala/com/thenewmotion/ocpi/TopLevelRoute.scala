@@ -66,24 +66,26 @@ trait TopLevelRoute extends JsonApi {
     val externalUseToken = new TokenAuthenticator(routingConfig.authenticateApiUser)
     val internalUseToken = new TokenAuthenticator(routingConfig.authenticateInternalUser)
 
-    (pathPrefix(routingConfig.namespace) & extract(_.request.uri)) { uri =>
-      pathPrefix("initiateHandshake") {
-        pathEndOrSingleSlash {
-          authenticateOrRejectWithChallenge(internalUseToken) { internalUser: ApiUser =>
-            new InitiateHandshakeRoute(routingConfig.handshakeService).route
-          }
-        }
-      } ~
-      authenticateOrRejectWithChallenge(externalUseToken) { apiUser: ApiUser =>
-        pathPrefix(EndpointIdentifier.Versions.name) {
+    (handleRejections(OcpiRejectionHandler.Default) & handleExceptions(OcpiExceptionHandler.Default)) {
+      (pathPrefix(routingConfig.namespace) & extract(_.request.uri)) { uri =>
+        pathPrefix("initiateHandshake") {
           pathEndOrSingleSlash {
-            versionsRoute(uri)
-          } ~
-          pathPrefix(Segment) { version =>
-            routingConfig.versions.get(version) match {
-              case None => reject(UnsupportedVersionRejection(version))
-              case Some(validVersion) => versionRoute(version, validVersion, uri, apiUser)
+            authenticateOrRejectWithChallenge(internalUseToken) { internalUser: ApiUser =>
+              new InitiateHandshakeRoute(routingConfig.handshakeService).route
             }
+          }
+        } ~
+        authenticateOrRejectWithChallenge(externalUseToken) { apiUser: ApiUser =>
+          pathPrefix(EndpointIdentifier.Versions.name) {
+            pathEndOrSingleSlash {
+              versionsRoute(uri)
+            } ~
+              pathPrefix(Segment) { version =>
+                routingConfig.versions.get(version) match {
+                  case None => reject(UnsupportedVersionRejection(version))
+                  case Some(validVersion) => versionRoute(version, validVersion, uri, apiUser)
+                }
+              }
           }
         }
       }

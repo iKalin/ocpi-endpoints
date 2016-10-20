@@ -16,18 +16,13 @@ import spray.json.DefaultJsonProtocol._
 class TopLevelRouteSpec extends Specification with Specs2RouteTest with Mockito{
 
   "api" should {
-    "authenticate api calls with valid token info" in new TopLevelScope {
-      Get("/cpo/versions") ~>
-        addHeader(validToken) ~> topLevelRoute.topLevelRoute ~> check {
-        handled must beTrue
-      }
-    }
-
     "reject api calls without Authorization header" in new TopLevelScope {
       Get("/cpo/versions") ~>
         addHeader(invalidHeaderName) ~> topLevelRoute.topLevelRoute ~> check {
-        handled must beFalse
-        rejection must haveClass[AuthenticationFailedRejection]
+        handled must beTrue
+
+        val json = responseAs[String].parseJson
+        json.extract[Int]('status_code) mustEqual 2011
       }
     }
 
@@ -36,8 +31,10 @@ class TopLevelRouteSpec extends Specification with Specs2RouteTest with Mockito{
       addHeader(invalidToken) ~>
       topLevelRoute.topLevelRoute ~>
       check {
-        handled must beFalse
-        rejection must haveClass[AuthenticationFailedRejection]
+        handled must beTrue
+
+        val json = responseAs[String].parseJson
+        json.extract[Int]('status_code) mustEqual 2010
       }
     }
 

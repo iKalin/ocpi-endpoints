@@ -12,11 +12,15 @@ import Directives._
 
 object OcpiExceptionHandler extends BasicDirectives with SprayJsonSupport {
 
+  private val logger = Logger(getClass)
+
   import com.thenewmotion.ocpi.msgs.v2_0.OcpiJsonProtocol._
 
   val Default = ExceptionHandler {
 
-    case exception => complete {
+    case exception =>
+      logger.error("An error occurred while processing the Http request", exception)
+      complete {
         ( InternalServerError,
             ErrorResp(
               GenericClientFailure.code,
